@@ -38,22 +38,22 @@ description: 현재 Git 변경을 주제별 단일 PR 또는 GitHub native stack
 
 ### PR을 준비하고 게시한다
 
-1. **입력 확보.** 사용자가 base, head, 전체 diff 같은 확인된 조회 결과를 제공하고 추가 조회를 막았다면 그 자료를 입력으로 쓴다. 그 밖에는 [상태 수집](references/github.md#상태를-수집한다)의 `git`·`gh` 명령으로 대상 저장소, 명의, base·head, 전체 diff, 작업 트리, 양식, 기존 PR을 읽는다. 사용자가 원격 조회를 막았으면 `gh` 명령은 실행하지 않는다.
+1. **입력 확보.** 사용자가 base, head, 전체 diff 같은 확인된 조회 결과를 제공하고 추가 조회를 막았다면 그 자료를 입력으로 쓴다. 그 밖에는 [상태 수집](references/github.md#상태를-수집한다)의 항목을 확인한다. 사용자가 원격 조회를 막았으면 원격에 기대는 항목은 미확인으로 둔다.
 
    | 확인 결과 | 행동 |
    |---|---|
    | 진행 중인 Git 작업, detached HEAD, base와 같은 head, 보낼 commit 없음 | 사유와 필요한 별도 Git 작업을 보고하고 그 PR은 만들지 않는다. |
-   | 같은 저장소 head branch의 열린 PR 있음 | URL과 현재 상태를 보고하고 새 PR은 만들지 않는다. |
+   | 같은 head의 열린 PR 있음 | URL과 현재 상태를 보고하고 새 PR은 만들지 않는다. |
    | 커밋하지 않은 변경 있음 | 원격 PR에 포함되지 않는 변경으로 보고한다. |
    | 조회 실패 | 그 조회에 기대는 결정은 확정하지 않고 미확인으로 남긴다. |
 
-   `git log <remote>/<base>..HEAD`와 `git diff <remote>/<base>...HEAD`를 다음 단계의 입력으로 쓴다.
+   원격 base부터 head까지의 commit과 diff를 다음 단계의 입력으로 쓴다.
 2. **PR 경계.** [PR 작성 지침](references/pr-writing.md#pr-경계를-점검한다)으로 경계를 정하고, 여러 PR이 서로 의존하면 [stacked PR 규칙](references/stacked-prs.md)을 적용한다. 현재 branch에 여러 주제가 섞였거나 필요한 branch·commit이 없으면 PR 계획과 필요한 Git 작업을 제시하고, 그 작업이 준비되거나 사용자가 함께 허가한 뒤 게시한다.
-3. **양식과 언어.** [PR 템플릿 규칙](references/pr-template.md)으로 `pullRequestTemplates` 조회 결과를 해석해 양식을 고르고 출력 언어를 정한다.
+3. **양식과 언어.** [PR 템플릿 규칙](references/pr-template.md)으로 양식을 고르고 출력 언어를 정한다.
 4. **본문.** [PR 작성 지침](references/pr-writing.md)에 따라 전체 diff와 현재 검증 근거로 제목·본문을 쓴다. commit 제목이나 `--fill` 결과는 참고만 한다. Writing·Fluent를 함께 쓸 때는 [작성 지침 함께 적용하기](../../references/writing-composition.md)에 따라 적용 양식과 확인 상태, 출력 언어, 근거·편집 범위와 보호할 연결 문법을 전달한다. 양식이 확인되기 전의 초안은 임시 초안으로 보고한다.
 5. **티켓 연결.** 티켓 ID나 URL이 있거나 사용자가 연동을 요청하면 [티켓 연결 규칙](references/ticket-linking.md)을 따른다. 기존 branch 이름의 ID는 가장 낮은 신뢰도의 hint로만 쓰고, provider는 확인된 근거로 정한다. 지원하지 않는 tracker 연결이 필수이면 연결 없는 PR로 바꾸지 않고 범위를 알린다. 티켓 intent와 PR event의 status effect를 나누고, native automation이 처리하는 transition은 automation에 맡긴다.
 6. **화면 자료.** [화면 자료 규칙](../../references/media.md)으로 필요 여부를 판단하고, 필요하면 캡처·변환해 `## Screenshots`에 배치한다. 보이는 변화가 없으면 그 절을 지운다.
-7. **게시.** `publish`에서만 실행한다. 직전에 head SHA, 작업 트리, 같은 head의 기존 PR을 다시 읽고, 양식 출처·언어·티켓 연결·검증 상태·`target_pr_state`·필수 미디어가 현재 요청과 맞는지 대조한다. 단일 PR과 독립 PR은 [GitHub 게시 절차](references/github.md#생성하고-검증한다)를, native stack은 [stacked PR 게시 절차](references/stacked-prs.md#native-stack으로-게시하고-검증한다)를 따른다.
+7. **게시.** `publish`에서만 실행한다. 직전에 활성 계정, head SHA, 원격 head, 작업 트리, 같은 head의 기존 PR을 다시 확인하고, 양식 출처·언어·티켓 연결·검증 상태·`target_pr_state`·필수 미디어가 현재 요청과 맞는지 대조한다. 단일 PR과 독립 PR은 [GitHub 게시 절차](references/github.md#생성하고-검증한다)를, native stack은 [stacked PR 게시 절차](references/stacked-prs.md#native-stack으로-게시하고-검증한다)를 따른다.
 8. **결과 확인.** PR과 미디어를 다시 읽어 최종 payload와 대조하고, 가능하면 canonical ticket도 다시 읽어 link와 status effect를 확인한다.
 
 ## 결과
@@ -64,19 +64,9 @@ description: 현재 Git 변경을 주제별 단일 PR 또는 GitHub native stack
 
 ## 예시
 
-입력: “현재 branch로 PR 올려 줘.”
+입력: “현재 branch로 PR 올려 줘.” 확인해 보니 같은 head 저장소의 같은 branch에서 열린 Draft PR #42가 있다. 새 PR은 만들지 않고 #42의 URL과 Draft 상태를 보고한다.
 
-```bash
-gh pr list --repo o/r --head feature/save-toast --state open --json number,url,isDraft,headRepositoryOwner
-```
-
-```json
-[{"number": 42, "url": "https://github.com/o/r/pull/42", "isDraft": true, "headRepositoryOwner": {"login": "o"}}]
-```
-
-push 대상 저장소 `o/r`의 같은 branch에서 열린 PR #42가 이미 있다. URL과 Draft 상태를 보고하고 새 PR은 만들지 않는다.
-
-대조: `gh repo view o/r --json pullRequestTemplates`가 인증 오류로 실패했다. 양식이 없다고 보지 않는다. 확인된 diff로 Why·Changes만 임시 초안으로 쓰고 양식 미확인을 본문 밖에 보고한다. `gh auth status`로 인증을 확인한 뒤 다시 조회해 양식을 정한다.
+대조: 양식 조회가 인증 오류로 실패했다. 양식이 없다고 보지 않는다. 확인된 diff로 Why·Changes만 임시 초안으로 쓰고 양식 미확인을 본문 밖에 보고한다.
 
 ## 경계
 

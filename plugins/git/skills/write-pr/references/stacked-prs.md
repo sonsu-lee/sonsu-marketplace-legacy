@@ -16,17 +16,10 @@ GitHub Issues closing keyword는 non-default base의 자동 종료 근거로 사
 
 ## 게시 전 chain을 고정한다
 
-1. 각 층을 [상태 수집](github.md#상태를-수집한다) 명령으로 읽되, `HEAD` 대신 그 층의 `refs/heads/<branch>`를 명시한다. 하단 층의 `<아래>`는 `<remote>/<trunk>`, 위층은 바로 아래 층의 `refs/heads/<branch>`다.
+1. 각 층을 [상태 수집](github.md#상태를-수집한다) 항목으로 확인하되, 현재 checkout이 아닌 층도 그 층의 branch 기준으로 읽는다. 각 층의 head SHA, 범위, 원격 ref, 기존 PR을 기록한다.
 
-   ```bash
-   git rev-parse refs/heads/<branch>
-   git log --oneline <아래>..refs/heads/<branch>
-   git diff --stat <아래>...refs/heads/<branch>
-   git merge-base --is-ancestor <아래> refs/heads/<branch>
-   ```
-
-   모든 층의 push 대상 저장소가 같고 fork가 아닌지 확인한다. 다르거나 대상 저장소를 확인하지 못하면 cross-fork·대상 불명 stack으로 보고 게시를 멈춘다. `git merge-base --is-ancestor`가 실패하면 선형 ancestry가 아니므로 게시를 멈춘다. 각 층의 head SHA, 범위, 원격 ref, 기존 PR을 기록한다.
-2. 위 branch가 아래 branch의 변경을 포함하지 않거나 각 층에 다른 주제가 섞이면 게시를 멈추고 필요한 Git 작업을 보고한다. 이 절차는 **모든 층이 새 PR**일 때 사용한다. publish 시작 전에 존재하던 PR이 끼어 있으면 그 PR의 base나 stack membership은 그대로 두고 현재 관계와 필요한 별도 작업을 보고한다.
+   위층은 바로 아래 층의 현재 head를 포함해야 한다. 하단 층은 trunk에서 분기했으면 되고, 그 뒤 trunk가 전진해도 된다. 모든 층의 base·head 저장소가 같아야 한다. 이 조건이 맞지 않거나 대상 저장소를 확인하지 못하면 게시를 멈추고 필요한 Git 작업을 보고한다.
+2. 각 층에 다른 주제가 섞이면 게시를 멈추고 필요한 Git 작업을 보고한다. 이 절차는 **모든 층이 새 PR**일 때 사용한다. publish 시작 전에 존재하던 PR이 끼어 있으면 그 PR의 base나 stack membership은 그대로 두고 현재 관계와 필요한 별도 작업을 보고한다.
 3. 각 층의 최종 제목·본문·양식·ticket reference·검증 상태·화면 자료를 준비한다. `target_pr_state`는 모든 층에 기본 Draft를 적용하고, 사용자가 stack 전체 또는 특정 층의 Ready를 명시한 경우에만 해당 층을 Ready로 정한다.
 4. 설치된 `gh stack link --help`, 인증 주체, 저장소·remote, GitHub stack 기능과 권한을 읽기 전용으로 확인한다. `GET /repos/{owner}/{repo}/stacks`는 조회 경로지만, 빈 목록만으로 생성 권한까지 단정하지 않는다. native stack을 사용할 수 없으면 일반 종속 PR로 조용히 대체하지 않는다.
 

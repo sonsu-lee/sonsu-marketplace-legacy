@@ -11,18 +11,18 @@ description: 열린 GitHub PR 목록이나 지정 PR의 CI·리뷰·병합 상�
 
 1. 직접 호출이면 사용자가 고른 대상과 범위를 따른다. 요청 목적이 이 스킬과 다르면 그 차이를 설명한다.
 2. [대상 확인](../../references/pr-inspection.md#대상-확인)에 따라 host, `OWNER/REPO`, PR을 정한다. 대상을 생략하면 현재 저장소로 정하고, 후보가 여럿일 때만 질문한다.
-3. [수집](../../references/pr-inspection.md#수집)의 `gh` 명령으로 PR 메타데이터, check, 필수 check, 미해결 대화를 읽는다. 열린 PR 목록은 `gh pr list`로 읽고 상세 근거가 필요한 PR만 다시 읽는다. 반응과 리뷰 요청 기록은 보고에 필요할 때만 읽는다.
+3. [수집](../../references/pr-inspection.md#수집) 항목을 `gh`로 읽는다. 열린 PR 목록은 먼저 목록을 읽고 상세 근거가 필요한 PR만 다시 읽는다.
 4. 결과에 따라 행동한다.
 
    | 결과 | 행동 |
    |---|---|
-   | 모든 명령 성공, 마지막 `headRefOid`가 처음과 같음 | 수집한 근거로 보고한다. |
-   | 일부 명령 실패 | 확인한 범위와 실패한 명령을 함께 보고한다. 실패한 항목을 빈 결과로 쓰지 않는다. |
-   | 목록 결과 수가 `--limit`과 같음 | 확인한 PR 수를 전체 수로 쓰지 않는다. |
-   | 마지막 `headRefOid`가 처음과 다름 | 새 head로 다시 수집하거나 혼합 관찰이라고 표시한다. |
-   | `gh auth status` 실패 | `gh` 설치·인증이 필요하다고 사용자에게 알린다. |
+   | 모든 조회 성공, 보고 직전 head가 처음과 같음 | 수집한 근거로 보고한다. |
+   | 일부 조회 실패 | 확인한 범위와 실패한 조회를 함께 보고한다. 실패한 항목을 빈 결과로 쓰지 않는다. |
+   | 목록이 조회 상한에서 잘림 | 확인한 PR 수를 전체 수로 쓰지 않는다. |
+   | 보고 직전 head가 처음과 다름 | 새 head로 다시 수집하거나 혼합 관찰이라고 표시한다. |
+   | 인증 실패 | `gh` 설치·인증이 필요하다고 사용자에게 알린다. |
 
-5. [해석](../../references/pr-inspection.md#해석)에 따라 Draft, base/head SHA, `mergeStateStatus`, check `bucket`별 수, 필수 check, `reviewDecision`과 리뷰별 commit, 미해결 review thread를 각각 기록한다. 이전 commit의 리뷰와 현재 head의 리뷰를 나눠 쓴다.
+5. [해석](../../references/pr-inspection.md#해석)에 따라 Draft, base/head SHA, 병합 상태, check 상태별 수, 필수 check, `reviewDecision`과 리뷰별 commit, 미해결 review thread를 각각 기록한다. 이전 commit의 리뷰와 현재 head의 리뷰를 나눠 쓴다.
 6. 여러 단계 조회는 [작업 연속성](../../references/continuity.md)에 이어서 기록한다. 쓰기가 금지된 환경이면 기록을 생략한다.
 
 ## 결과
@@ -38,21 +38,7 @@ description: 열린 GitHub PR 목록이나 지정 PR의 CI·리뷰·병합 상�
 
 입력: `ghe.example.com의 tools/widget에서 PR 31 상태를 알려 줘.`
 
-```bash
-gh pr view 31 --repo ghe.example.com/tools/widget --json isDraft,headRefOid,mergeStateStatus,reviewDecision
-gh pr checks 31 --repo ghe.example.com/tools/widget --json name,bucket
-gh pr checks 31 --repo ghe.example.com/tools/widget --required --json name,bucket
-```
-
-출력 발췌:
-
-```json
-{"isDraft": false, "headRefOid": "4f1c2e…", "mergeStateStatus": "CLEAN", "reviewDecision": "REVIEW_REQUIRED"}
-[{"name": "test", "bucket": "pass"}, {"name": "deploy-preview", "bucket": "skipping"}]
-[{"name": "test", "bucket": "pass"}]
-```
-
-review thread 조회에서 `isResolved: false`, `isOutdated: true`인 thread가 하나 나왔다.
+조회 결과: Draft 아님, head `4f1c2e…`, `mergeStateStatus` `CLEAN`, `reviewDecision` `REVIEW_REQUIRED`. check는 `test` pass, `deploy-preview` skipping이고, 필수 check로 보고된 것은 `test`(pass) 하나다. 해결되지 않은 outdated thread가 하나 있다.
 
 보고:
 
@@ -62,7 +48,7 @@ review thread 조회에서 `isResolved: false`, `isOutdated: true`인 thread가 
 
 outdated thread도 미해결 대화로 센다.
 
-대조: `gh pr checks 31 --required`가 HTTP 403으로 실패했으면 필수 check를 "미확인"으로 쓴다. "필수 check 없음"으로 쓰지 않는다.
+대조: 필수 check 조회가 HTTP 403으로 실패했으면 필수 check를 "미확인"으로 쓴다. "필수 check 없음"으로 쓰지 않는다.
 
 ## 경계
 
