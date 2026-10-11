@@ -4,12 +4,13 @@ GitHub PR payload를 작성하거나 새 PR을 게시할 때 읽는다. 여러 P
 
 ## 상태를 수집한다
 
-fetch, checkout, Git 설정 변경 없이 다음을 읽는다. `<REPO>`는 push remote URL에서 정한 `[HOST/]OWNER/REPO`다. 사용자가 원격 조회를 막았으면 `gh` 명령은 실행하지 않고 해당 항목을 미확인으로 둔다.
+fetch, checkout, Git 설정 변경 없이 다음을 읽는다. `<REPO>`는 `gh repo view`가 돌려준 `url`의 host와 `nameWithOwner`다. remote URL에는 자격 증명이 들어 있을 수 있으므로 `git remote -v`처럼 URL을 출력하는 명령은 쓰지 않는다. 사용자가 원격 조회를 막았으면 `gh` 명령은 실행하지 않고 해당 항목을 미확인으로 둔다.
 
 ```bash
 git status
-git remote -v
-gh repo view <REPO> --json nameWithOwner,isFork,parent,defaultBranchRef,pullRequestTemplates
+git remote
+git rev-parse --abbrev-ref '@{push}'
+gh repo view --json nameWithOwner,url,isFork,parent,defaultBranchRef,pullRequestTemplates
 git log --oneline <base>..HEAD
 git diff --stat <base>...HEAD
 git ls-remote <remote> refs/heads/<branch>

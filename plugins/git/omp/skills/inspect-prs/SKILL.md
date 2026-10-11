@@ -58,7 +58,7 @@ review thread 조회에서 `isResolved: false`, `isOutdated: true`인 thread가 
 
 | PR | Draft | head | 병합 상태 | CI | 리뷰 | 미해결 대화 |
 |---|---|---|---|---|---|---|
-| #31 | 아니요 | `4f1c2e…` | `CLEAN`(GitHub 보고값) | pass 1, skipping 1. 필수 check 1개 pass | 리뷰 필요 | 1(outdated) |
+| #31 | 아니요 | `4f1c2e…` | `CLEAN`(GitHub 보고값) | pass 1, skipping 1. 보고된 필수 check 1개 pass, 필수 check 전체 여부 미확인 | 리뷰 필요 | 1(outdated) |
 
 outdated thread도 미해결 대화로 센다.
 
