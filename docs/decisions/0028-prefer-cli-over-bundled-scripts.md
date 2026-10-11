@@ -47,6 +47,11 @@ tooling"을, Claude 문서는 깨지기 쉬운 작업에만 정해진 스크립�
 
 - 조회 결과는 `gh` 출력 그대로 해석한다. 조회 단위별 `partial` 판정, 처음·마지막 head 자동 비교 같은
   수집기 전용 보장은 사라지고, 스킬이 필요한 시점에 `headRefOid`를 다시 읽어 비교한다.
+- 문서에는 GitHub·`gh`가 실제로 어떻게 동작하는지(PR은 활성 계정 명의로 만들어진다, `gh pr checks`는 merge box
+  기준이다 등)를 쓰고, 드문 예외마다 방어 문장을 더하지 않는다. 다음은 알려진 한계로 둔다.
+  - 댓글이 100개를 넘는 review thread는 앞 100개만 읽고 일부만 읽었다고 보고한다.
+  - commit에만 연결되고 PR 병합에 영향을 주지 않는 check run은 `gh pr checks`에 나오지 않는다.
+  - 아직 시작하지 않은 필수 check는 `--required`에 나오지 않는다.
 - `plugins/git/tests`가 비어 제거된다. Git 플러그인 검증은 생성물 검사로 한다.
 - Review의 `pr_review_snapshot.py`처럼 같은 성격의 다른 수집 스크립트는 이 결정으로 바로 바꾸지 않는다.
 
