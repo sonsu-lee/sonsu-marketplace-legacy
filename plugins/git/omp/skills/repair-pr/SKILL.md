@@ -9,7 +9,7 @@ description: GitHub PR의 충돌을 해결하거나 리뷰 지적·실패한 CI�
 
 ## 절차
 
-1. 이 SKILL.md가 있는 실제 디렉터리에서 `../../scripts/inspect_prs.py --host <host> --repo <owner>/<repo> --pr <number>`를 실행하고 [PR 조회](../../references/pr-inspection.md) 해석에 따라 URL·host/repository·base/head SHA·상태·실패 CI·미해결 대화를 확인한다. 번호 생략 시 현재 브랜치의 유일한 PR을 사용한다. CI만·리뷰만 요청했다면 그 범위를 유지하고 실행 목적이 없으면 상태와 필요한 범위를 먼저 확인한다.
+1. [PR 조회](../../references/pr-inspection.md)의 `gh` 명령으로 URL·host/repository·base/head SHA·상태·실패 CI·미해결 대화를 확인한다. 번호 생략 시 현재 브랜치의 유일한 PR을 사용한다. CI만·리뷰만 요청했다면 그 범위를 유지하고 실행 목적이 없으면 상태와 필요한 범위를 먼저 확인한다.
 2. repo 지침·현재 HEAD/branch·staged/unstaged/untracked·진행 중 Git operation을 읽는다. 다른 PR branch나 충돌 작업은 소유한 격리 worktree에서 수행하고 baseline·원격 ref를 기록한다. 새 로컬 branch가 필요하면 확인된 PR head ref를 보존하고 [이름 규칙](../../references/branch-naming.md)을 적용한다. 필요한 객체만 확인된 remote에서 fetch한다. fork는 base 저장소와 실제 push 대상 head 저장소·ref를 구분하며 정확한 head를 확보한 뒤 수정한다.
 3. 충돌이 범위에 있으면 최신 base를 확인해 PR head에 merge한다. commit 승인이 없으면 격리 공간에서 `git merge --no-commit --no-ff <verified-base-ref>`로 결과를 준비한다. 코드·계약·테스트로 충돌을 해결하고 관련 검사를 실행한다. merge 실패는 실제 상태를 읽고 중간 상태·격리 경로를 보존한다. 승인된 경우에만 해당 범위의 merge commit을 생성한다. CI에 commit이 필요하지만 승인이 없으면 가능한 로컬 검증과 제한을 보고한다.
 4. 미해결 리뷰를 작성자와 관계없이 읽고 [리뷰 지적 대응](../../references/responding-to-review.md)으로 판정·대응한다. 같은 원인은 묶어 최소 수정하고 회귀와 가까운 보존 동작을 검증한다. 독립적으로 승인된 수정은 계속한다. 답글은 대상 저장소와 사용자 언어 규칙을 따른다.

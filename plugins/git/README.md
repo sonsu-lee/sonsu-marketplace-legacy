@@ -27,19 +27,19 @@ omp plugin install git@sonsu-marketplace
 
 요청: “현재 branch의 PR 초안만 준비해 줘. 게시는 하지 마.”
 
-`write-pr`가 [`scripts/pr_context.py`](scripts/pr_context.py)로 base·head·commit 범위와 양식 후보를 읽고, 원격 쓰기 없이 Conventional Commits 형식의 제목과 `Why`·`Changes` 본문, 미확인 항목을 보고합니다. 보이는 변화가 있으면 [화면 자료 기준](references/media.md)대로 Before/After를 준비합니다.
+`write-pr`가 `git`·`gh` 명령으로 base·head·commit 범위와 저장소 PR 양식을 읽고, 원격 쓰기 없이 Conventional Commits 형식의 제목과 `Why`·`Changes` 본문, 미확인 항목을 보고합니다. 보이는 변화가 있으면 [화면 자료 기준](references/media.md)대로 Before/After를 준비합니다.
 
 ## 구성
 
 - 공통 기준: [Git 안전 규칙](references/git-safety.md), [전달 권한](references/delivery-authority.md), [새 브랜치 이름](references/branch-naming.md), [커밋 메시지 규칙](references/conventional-commits.md), [문장 형식](references/tracker-prose.md), [화면 자료](references/media.md), [호스트별 도구](references/hosts.md), [PR 조회](references/pr-inspection.md), [리뷰 지적 대응](references/responding-to-review.md)
 - 티켓 작성과 lifecycle 변경은 `tickets` 플러그인이, 코드 리뷰는 `review` 플러그인이 담당합니다.
 - 공유 기준은 `shared/`의 정본에서 생성기로 복사합니다. 생성물은 직접 고치지 않습니다.
-- 도구: [`pr_context.py`](scripts/pr_context.py)는 PR 게시 입력을, [`inspect_prs.py`](scripts/inspect_prs.py)는 PR 상태와 리뷰 요청 이력을 읽기 전용으로 수집합니다.
 - [작업 연속성](references/continuity.md)은 여러 단계 작업의 계약·진행·근거 위치를 `.sonsu/continuity/`에 기록합니다. omp 배포본은 omp 순정 todo·session을 씁니다.
 - 작성 지침·양식의 출처 고지는 [MIT 고지](WRITING_LICENSE.md)에, Conventional Commits 인용과 설계 참고는 [UPSTREAM.md](UPSTREAM.md)에 있습니다.
 
 ## 검증
 
 ```bash
-python3 -B -m unittest discover -s plugins/git/tests -p 'test_*.py' -v
+python3 scripts/render-shared-files.py --check
+python3 scripts/render-omp-compat.py --check
 ```

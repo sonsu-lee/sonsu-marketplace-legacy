@@ -57,3 +57,4 @@ Considered, Consequences와 Revisit When을 포함합니다.
 - [ADR 0025: Engineering 리뷰 진입점 통합](0025-merge-engineering-review-entry-points.md)
 - [ADR 0026: Design Patterns를 omp opt-in 패키지로 배포](0026-ship-design-patterns-as-omp-opt-in.md)
 - [ADR 0027: Workflow·Engineering을 Git·Tickets·Review·Dev Workflow로 분리](0027-split-workflow-and-engineering-plugins.md)
+- [ADR 0028: 수집 스크립트 대신 모델이 모르는 사실만 스킬에 쓴다](0028-prefer-cli-over-bundled-scripts.md)

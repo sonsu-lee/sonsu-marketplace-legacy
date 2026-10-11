@@ -4,37 +4,33 @@ GitHub PR payload를 작성하거나 새 PR을 게시할 때 읽는다. 여러 P
 
 ## 상태를 수집한다
 
-[`pr_context.py`](../../../scripts/pr_context.py)가 저장소 상태를 읽기 전용으로 수집한다. fetch, checkout, Git 설정 변경 없이 로컬 객체만 읽고, 네트워크 조회는 `--offline`이 없을 때만 한다. 원격 조회가 인증 입력을 요구하거나 30초 안에 끝나지 않으면 실패로 `errors`에 남기고 해당 항목을 `unverified`로 둔다. 각 확인 항목은 다음 필드로 판단한다.
+fetch, checkout, Git 설정 변경 없이 다음을 확인한다. 사용자가 원격 조회를 막았으면 원격에 기대는 항목은 미확인으로 둔다.
 
-| 확인 항목 | 필드 |
-|---|---|
-| 정확한 `[HOST/]OWNER/REPOSITORY`, visibility, fork의 상위 저장소, 인증 주체 | `repository` (`remote`, `github`, `github.parent`, `auth_login`) |
-| base 결정 순서: 사용자 지정, branch의 `gh-merge-base`, 저장소 default branch | `base.source` |
-| 대상 branch, upstream, remote ref, head SHA | `head` |
-| merge base부터 head까지의 commit과 diff | `range` |
-| 저장소 root, linked worktree, 진행 중인 Git 작업과 staged·unstaged·untracked 변경 | `repository.worktree`, `working_tree` |
-| 적용할 PR 양식 | `templates` ([PR 템플릿 규칙](pr-template.md)) |
-| 같은 저장소 head branch의 open·draft PR. fork의 같은 이름 branch PR은 `items`에 `is_cross_repository: true`로만 남는다. | `existing_prs` |
+- 대상: PR을 만들 base 저장소와 head 저장소, 활성 `gh` 계정
+- base: 사용자 지정, `branch.<branch>.gh-merge-base` 설정, 저장소 default branch 순서
+- 보낼 범위: 원격 base부터 head까지의 commit과 diff
+- push 상태: head branch가 원격에 있는지와 그 SHA
+- PR에 들어가지 않는 변경: 미커밋·untracked 변경
+- 양식: [PR 템플릿 규칙](pr-template.md)
+- 기존 PR: 같은 head 저장소·branch에서 열린 PR
+- `CONTRIBUTING`과 기존 PR 관례
 
-`range`에 관련 없는 commit이나 파일이 있으면 포함 범위를 그대로 두고 보고한다. `working_tree`의 미커밋 변경은 원격 PR diff에 들어가지 않으므로 별도로 보고한다. `CONTRIBUTING`·기존 PR 관례는 직접 읽는다. `repository.remote.url`은 https URL의 자격 증명을 뺀 값이다.
+놓치기 쉬운 GitHub 동작:
 
-`repository.github`는 push remote의 저장소다. 온라인 조회에서 이 저장소가 fork로 확인되면 `github.parent`에 상위 저장소 `owner`·`name`이 들어가고, PR이 parent에 있을 수 있으므로 기존 PR은 조회하지 않는다. 이때 `unverified`에 `github-repository`와 `existing-prs`가 들어간다. PR 대상 저장소와 그 저장소 기준의 base·양식·기존 PR을 사용자에게 확인하고, 확인 전에는 게시하지 않는다. fork가 아니거나 확인하지 못했으면 `github.parent`는 `null`이다.
+- PR은 base 저장소의 base branch와 head 저장소의 head branch를 비교하고, 활성 `gh` 계정 명의로 만들어지며, push된 commit만 담는다.
+- fork에서 여는 PR은 head 저장소(fork)와 base 저장소(`parent`)가 다르다. base·양식·기존 PR은 base 저장소 기준이고 head branch는 fork에 있다. 사용자가 어느 저장소로 보낼지 정하지 않았으면 확인한 뒤 게시한다.
+- 로컬의 remote-tracking base는 마지막 fetch 시점의 값이다. 원격 base가 더 나아갔으면 범위가 실제 PR과 달라지므로 fetch가 필요하다고 보고한다.
+- branch 이름으로 찾은 PR에는 다른 fork의 같은 이름 branch PR도 섞인다. head 저장소 owner가 같은 것만 기존 PR이다.
+- remote URL에는 자격 증명이 들어 있을 수 있으므로 출력하지 않는다.
 
-stack의 위층은 `--base refs/heads/<아래 branch>`로 실행한다. 이때 `range`는 바로 아래 branch의 head부터 위층 head까지이며, `base-not-ancestor`가 있으면 선형 ancestry가 아니므로 멈춘다.
+다음이면 그 PR을 만들지 않고 정확한 현재 상태와 필요한 별도 Git workflow를 보고한다.
 
-`blockers`에 값이 있으면 그 PR을 만들지 않고 정확한 현재 상태와 필요한 별도 Git workflow를 보고한다.
+- merge·rebase·cherry-pick·revert·bisect가 진행 중이거나 detached HEAD다.
+- head가 base와 같은 branch이거나 같은 commit이다. base branch에 직접 만든 미push commit도 PR로 보내지 않는다.
+- 보낼 commit이 없다.
+- 같은 head의 열린 PR이 있다.
 
-| blocker | 의미 |
-|---|---|
-| `detached-head` | 대상이 이름 있는 branch가 아니다. stack의 모든 대상도 이름 있는 branch여야 한다. |
-| `operation-in-progress` | merge·rebase·cherry-pick·revert·bisect가 진행 중이다. |
-| `base-unresolved`, `no-merge-base` | base를 해석하지 못했거나 head와 공통 조상이 없다. |
-| `base-not-ancestor` | stack 위층이 아래 branch의 현재 head를 포함하지 않는다. |
-| `head-equals-base` | head와 base가 같은 branch(로컬 branch와 그 remote-tracking ref 포함)이거나 같은 commit이다. base branch에 직접 만든 미push commit도 PR로 보내지 않는다. |
-| `empty-range` | PR로 보낼 commit이 없다. |
-| `existing-pr` | push 대상 저장소의 같은 branch에서 열린 PR이 이미 있다. 다른 fork에서 이름이 같은 branch로 연 PR은 `items`에만 남고 blocker가 되지 않는다. |
-
-PR에 새 branch가 필요하면 이름을 제안만 하고 생성·rename은 사용자의 별도 Git 작업으로 넘긴다. 이름을 제안할 때는 [공통 이름 규칙](../../../references/branch-naming.md)을 읽는다. `unverified`에 있는 항목은 확인하지 못한 상태로 보고하고 그 항목에 기대는 결정을 확정하지 않는다.
+PR에 새 branch가 필요하면 이름을 제안만 하고 생성·rename은 사용자의 별도 Git 작업으로 넘긴다. 이름을 제안할 때는 [공통 이름 규칙](../../../references/branch-naming.md)을 읽는다. 조회에 실패한 항목은 확인하지 못한 상태로 보고하고 그 항목에 기대는 결정을 확정하지 않는다.
 
 ## payload를 준비한다
 
@@ -64,9 +60,11 @@ CLI에서는 완성한 multiline body를 임시 파일에 기록하고 `gh pr cr
 
 ## 생성하고 검증한다
 
-1. `pr_context.py`를 다시 실행해 `repository`·`auth_login`·`base`·`head.sha`·`head.remote_sha`가 준비한 payload의 값과 같고 `existing_prs.status`가 `checked`이며 `blockers`가 비어 있는지 확인한다. 최종 제목·본문·티켓 연결·검증 근거·`target_pr_state`가 요청 범위에 맞는지 대조한다.
-2. 필요한 일반 push를 한 번 수행하고 remote ref를 확인한다.
+1. 준비할 때와 활성 계정, head SHA, 원격 head가 같고, PR에 들어가지 않는 변경과 같은 head의 열린 PR이 없는지 다시 확인한다. 다르면 게시하지 않고 보고한다. 최종 제목·본문·티켓 연결·검증 근거·`target_pr_state`가 요청 범위에 맞는지 대조한다.
+2. 필요한 일반 push를 한 번 수행하고 원격 head SHA를 확인한다.
 3. 미디어가 없으면 `draft`에 `--draft`를 사용하고 명시된 `ready`에만 non-draft로 생성한다. 미디어가 있으면 [화면 자료 업로드 절차](../../../references/media.md#github에-올린다)대로 Draft PR 생성과 첨부를 한 명령으로 하고, 명시된 Ready 전환은 첨부 확인 뒤에 한다. `--attach`를 쓸 수 없을 때의 대안도 그 절차를 따른다.
 4. 반환된 URL이나 number로 PR을 다시 읽어 정확한 저장소·URL·번호·제목·본문·base·head·Draft 상태·head SHA와 ticket reference를 확인한다. 미디어가 있으면 본문에 `NN-…` 로컬 참조가 남아 있지 않은지도 확인한다.
 
 응답이 불명확하면 같은 push·create·edit를 반복하지 않는다. stdout, remote ref, 같은 head의 기존 PR과 저장된 body를 먼저 조회하여 성공한 단계와 남은 단계를 구분한다. 첨부의 부분 실패는 [화면 자료 업로드 절차](../../../references/media.md#github에-올린다)대로 실패한 파일만 다시 올린다.
+
+`gh pr create`가 같은 head·base의 PR이 이미 있다며 실패하면 새 PR을 만들지 않고 출력된 URL을 보고한다.

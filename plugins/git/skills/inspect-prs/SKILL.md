@@ -11,31 +11,25 @@ description: 열린 GitHub PR 목록이나 지정 PR의 CI·리뷰·병합 상�
 
 1. 직접 호출이면 사용자가 고른 대상과 범위를 따른다. 요청 목적이 이 스킬과 다르면 그 차이를 설명한다.
 2. [대상 확인](../../references/pr-inspection.md#대상-확인)에 따라 host, `OWNER/REPO`, PR을 정한다. 대상을 생략하면 현재 저장소로 정하고, 후보가 여럿일 때만 질문한다.
-3. 이 SKILL.md가 있는 실제 디렉터리에서 수집기를 실행한다. 반응을 보고해야 할 때만 `--include-reactions`를 붙인다.
-
-   ```bash
-   ../../scripts/inspect_prs.py --host <host> --repo <owner>/<repo> --pr <number>
-   ../../scripts/inspect_prs.py --host <host> --repo <owner>/<repo> --open
-   ```
-
-4. 종료 코드와 `status`에 따라 행동한다.
+3. [수집](../../references/pr-inspection.md#수집) 항목을 `gh`로 읽는다. 열린 PR 목록은 먼저 목록을 읽고 상세 근거가 필요한 PR만 다시 읽는다.
+4. 결과에 따라 행동한다.
 
    | 결과 | 행동 |
    |---|---|
-   | 0 | 수집한 근거로 보고한다. 필수 check 완전성은 `required_checks`대로 미확인으로 쓴다. |
-   | 1, 조회 단위 `partial`·`failed`·`skipped` | 확인한 범위와 실패한 조회·페이지를 함께 보고한다. 목록이면 확인한 PR 수를 전체 수로 쓰지 않는다. |
-   | 1, `head_changed: true` | 새 head로 다시 수집하거나 혼합 관찰이라고 표시한다. |
-   | 1, `head_changed: null` | head 일치를 미확인으로 보고한다. |
-   | 2 | 인자를 고치거나, `gh` 설치·인증이 필요하다고 사용자에게 알린다. |
+   | 모든 조회 성공, 보고 직전 head가 처음과 같음 | 수집한 근거로 보고한다. |
+   | 일부 조회 실패 | 확인한 범위와 실패한 조회를 함께 보고한다. 실패한 항목을 빈 결과로 쓰지 않는다. |
+   | 목록이 조회 상한에서 잘림 | 확인한 PR 수를 전체 수로 쓰지 않는다. |
+   | 보고 직전 head가 처음과 다름 | 새 head로 다시 수집하거나 혼합 관찰이라고 표시한다. |
+   | 인증 실패 | `gh` 설치·인증이 필요하다고 사용자에게 알린다. |
 
-5. [해석](../../references/pr-inspection.md#해석)에 따라 Draft, base/head SHA, `mergeStateStatus`, check 상태별 수, `reviewDecision`과 리뷰별 commit, 미해결 review thread를 각각 기록한다. 이전 commit의 리뷰와 현재 head의 리뷰를 나눠 쓴다.
+5. [해석](../../references/pr-inspection.md#해석)에 따라 Draft, base/head SHA, 병합 상태, check 상태별 수, 필수 check, `reviewDecision`과 리뷰별 commit, 미해결 review thread를 각각 기록한다. 이전 commit의 리뷰와 현재 head의 리뷰를 나눠 쓴다.
 6. 여러 단계 조회는 [작업 연속성](../../references/continuity.md)에 이어서 기록한다. 쓰기가 금지된 환경이면 기록을 생략한다.
 
 ## 결과
 
-- 머리말: 조회 시점, host와 저장소, 범위(`--pr` 또는 `--open`), 확인한 PR 수와 누락 범위
+- 머리말: 조회 시점, host와 저장소, 범위(지정 PR 또는 열린 PR 목록), 확인한 PR 수와 누락 범위
 - PR 표: 링크, Draft, head SHA, 병합 상태, CI, 리뷰, 미해결 대화. 목록은 요약하고 상세 근거는 필요한 PR에만 붙인다.
-- CI 칸은 `success`, `failure`, `pending`, `skipped`, `neutral`, `unknown`, check 없음, 조회 실패를 각각 센다. `success`만 성공으로 센다.
+- CI 칸은 `pass`, `fail`, `pending`, `skipping`, `cancel`, check 없음, 조회 실패를 각각 센다. `pass`만 성공으로 센다.
 - `CLEAN`·`UNSTABLE` 같은 병합 상태는 GitHub가 보고한 값으로 쓰고, 병합 승인이나 준비 완료 판정과 구분한다.
 - 봇의 PR 본문 👍는 부가 정보로만 쓴다. 현재 head 검토, CI 통과, 병합 조건 충족의 근거로 쓰지 않는다.
 - 리뷰 응답 지연 PR과 검토자·요청 시각. 판정은 [리뷰 응답 지연](../../references/pr-inspection.md#리뷰-응답-지연)을 따르고, 판정할 수 없으면 미확인으로 쓴다.
@@ -44,30 +38,17 @@ description: 열린 GitHub PR 목록이나 지정 PR의 CI·리뷰·병합 상�
 
 입력: `ghe.example.com의 tools/widget에서 PR 31 상태를 알려 줘.`
 
-```bash
-../../scripts/inspect_prs.py --host ghe.example.com --repo tools/widget --pr 31
-```
-
-출력 발췌(종료 코드 0):
-
-```json
-{"queried_at": "2026-10-09T04:12:30Z",
- "pull_requests": [{"number": 31, "head_sha": "4f1c2e…", "head_changed": false,
-   "metadata": {"data": {"isDraft": false, "mergeStateStatus": "CLEAN", "reviewDecision": "REVIEW_REQUIRED"}},
-   "ci_states": {"check_runs": ["success", "skipped", "neutral"], "latest_statuses": []},
-   "required_checks": {"status": "unverified"},
-   "review_threads": {"status": "complete", "items": [{"isResolved": false, "isOutdated": true}]}}]}
-```
+조회 결과: Draft 아님, head `4f1c2e…`, `mergeStateStatus` `CLEAN`, `reviewDecision` `REVIEW_REQUIRED`. check는 `test` pass, `deploy-preview` skipping이고, 필수 check로 보고된 것은 `test`(pass) 하나다. 해결되지 않은 outdated thread가 하나 있다.
 
 보고:
 
 | PR | Draft | head | 병합 상태 | CI | 리뷰 | 미해결 대화 |
 |---|---|---|---|---|---|---|
-| #31 | 아니요 | `4f1c2e…` | `CLEAN`(GitHub 보고값) | 성공 1, skipped 1, neutral 1. 필수 check 완전성 미확인 | 리뷰 필요 | 1(outdated) |
+| #31 | 아니요 | `4f1c2e…` | `CLEAN`(GitHub 보고값) | pass 1, skipping 1. 보고된 필수 check 1개 pass, 필수 check 전체 여부 미확인 | 리뷰 필요 | 1(outdated) |
 
 outdated thread도 미해결 대화로 센다.
 
-대조: `--open` 결과의 `selection`이 `{"status": "partial", "pages": 1, "errors": [{"page": 2, "message": "HTTP 403"}]}`이고 종료 코드가 1이면 "열린 PR 100개 확인, 2페이지부터 HTTP 403으로 미확인"이라고 보고한다. "열린 PR은 100개"라고 쓰지 않는다.
+대조: 필수 check 조회가 HTTP 403으로 실패했으면 필수 check를 "미확인"으로 쓴다. "필수 check 없음"으로 쓰지 않는다.
 
 ## 경계
 
@@ -76,6 +57,6 @@ outdated thread도 미해결 대화로 센다.
 
 ## 참고 자료
 
-- [GitHub PR 조회](../../references/pr-inspection.md): 수집기 CLI, 출력 필드, 상태 정규화, 종료 코드, 해석 규칙
+- [GitHub PR 조회](../../references/pr-inspection.md): 수집 명령, 해석 규칙, 리뷰 응답 지연
 - [작업 연속성](../../references/continuity.md)
 - [호스트별 도구](../../references/hosts.md)

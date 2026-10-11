@@ -4,22 +4,15 @@ PR title과 body를 작성하기 전에 읽는다. 대상 저장소의 유효한
 
 ## 양식 조회 결과를 해석한다
 
-[`pr_context.py`](../../../scripts/pr_context.py)의 `templates`가 대상 저장소 default branch 기준의 양식 후보를 알려 준다. 도구는 GitHub 공식 위치(`.github/`, 저장소 root, `docs/`의 `pull_request_template` 파일과 `PULL_REQUEST_TEMPLATE/` 디렉터리)에서 대소문자 구분 없이 후보를 찾는다. `candidates`에는 PR 기본 본문이 되는 단일 `pull_request_template` 파일을 `.github/`, 저장소 root, `docs/` 순서로 먼저 두고, `template=` query로만 고르는 `PULL_REQUEST_TEMPLATE/` 디렉터리 양식을 같은 위치 순서로 그 뒤에 둔다.
+GitHub이 PR에 쓰는 양식은 base 저장소 default branch의 양식이고, 없으면 owner `.github` 저장소의 기본 양식이다. `gh repo view --json pullRequestTemplates`는 둘을 구분하지 않고 `filename`과 `body`로 돌려준다.
 
-| `templates.status` | 해석 |
+| 결과 | 해석 |
 |---|---|
-| `found` | 대상 저장소의 템플릿이다. account-level default와 합치지 않는다. |
-| `account-default` | 대상 저장소에 템플릿이 없어 공개 owner `.github` 저장소의 기본 템플릿을 쓴다. |
-| `none` | 두 곳 모두 템플릿이 없음을 확인했다. [기본 템플릿](#기본-템플릿-적용-조건을-확인한다)을 쓸 수 있다. |
-| `local-only`, `unverified` | 원격 양식을 확인하지 못했다. 기본 양식으로 확정하지 않는다. |
+| 양식 하나 이상 | [아래 순서](#관련-템플릿-하나를-선택한다)로 하나를 고른다. |
+| 양식 없음 | 저장소와 owner 기본 양식 모두 없다. [기본 템플릿](#기본-템플릿-적용-조건을-확인한다)을 쓸 수 있다. |
+| 조회 실패 | 양식을 확인하지 못했다. 기본 양식으로 확정하지 않는다. |
 
 사용자가 확인된 조회 결과로 양식 상태나 양식 본문을 제공했으면 그 상태를 같은 표로 해석한다.
-
-선택한 후보의 본문은 다음 명령으로 읽는다. 읽기에 실패하면 `unverified`로 다룬다.
-
-```bash
-gh api --hostname <host> "repos/<source.repository>/contents/<path>?ref=<source.ref>"
-```
 
 현재 feature branch에만 추가·수정된 템플릿은 사용자가 그 변경본을 쓰라고 명시한 경우에만 사용한다.
 
@@ -33,12 +26,12 @@ gh api --hostname <host> "repos/<source.repository>/contents/<path>?ref=<source.
 
 1. 사용자가 정확한 양식 path나 이름을 지정했으면 그 파일이 default branch에 존재하는지 확인하여 사용한다.
 2. `CONTRIBUTING`, 저장소 문서나 양식 자체가 change type·경로별 선택 규칙을 제공하면 실제 diff에 맞는 파일을 사용한다.
-3. `candidates`에 단일 `pull_request_template` 파일이 있으면 그중 첫 후보를 기본 template으로 사용한다.
-4. 여러 양식 전용 디렉터리의 후보 중 하나가 실제 변경 유형에 명확히 대응하면 그 근거를 기록하고 사용한다.
-5. 유효한 후보가 하나뿐이면 그 파일을 사용한다.
+3. `filename`이 `pull_request_template.md`(대소문자 무관)인 양식은 새 PR 본문에 자동 적용되는 기본 양식이다. 있으면 그것을 사용한다. 나머지 `filename`은 `PULL_REQUEST_TEMPLATE/` 디렉터리의 선택형 양식이다.
+4. 기본 양식이 없고 선택형 양식이 하나뿐이면 그 양식을 사용한다.
+5. 선택형 양식 중 하나가 실제 변경 유형에 명확히 대응하면 그 근거를 기록하고 사용한다.
 6. 여러 후보가 동등하게 맞고 저장소 근거로 고를 수 없으면 가능한 제목, 변경 요약과 후보 목록까지 준비한 뒤, 최종 본문 확정이나 publish 전에 사용자에게 양식 선택을 요청한다. 후보를 합치거나 fallback으로 바꾸지 않는다.
 
-선택한 source 저장소, 양식 path, 기준 default branch와 확인한 ref를 기록한다.
+선택한 양식의 `filename`을 기록한다.
 
 ## 출력 언어를 결정한다
 
@@ -57,7 +50,7 @@ gh api --hostname <host> "repos/<source.repository>/contents/<path>?ref=<source.
 
 ## 기본 템플릿 적용 조건을 확인한다
 
-대상 저장소와 owner의 account-level default 모두에 유효한 PR template이 없다고 확인된 경우(`templates.status: none`)에 번들 [PR 기본 양식](../assets/templates/pull-request.md)을 사용한다. `local-only`·`unverified` 상태에서는 확인된 사실로 준비 가능한 설명만 임시 초안으로 쓰고, 양식 확인 상태와 남은 게시 조건을 본문 밖에서 알린다. 이때 확인된 변경 요약과 미확인 사항은 전달하되 양식 부재나 게시 준비 완료로 표현하지 않는다.
+양식이 없다고 확인되면 번들 [PR 기본 양식](../assets/templates/pull-request.md)을 사용한다. 조회에 실패했으면 확인된 사실로 준비 가능한 설명만 임시 초안으로 쓰고, 양식 확인 상태와 남은 게시 조건을 본문 밖에서 알린다. 이때 확인된 변경 요약과 미확인 사항은 전달하되 양식 부재나 게시 준비 완료로 표현하지 않는다.
 
 ## 저장소에 PR 양식을 설치한다
 
