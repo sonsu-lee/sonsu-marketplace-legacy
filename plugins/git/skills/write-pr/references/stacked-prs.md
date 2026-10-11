@@ -16,7 +16,7 @@ GitHub Issues closing keyword는 non-default base의 자동 종료 근거로 사
 
 ## 게시 전 chain을 고정한다
 
-1. 각 층을 [상태 수집](github.md#상태를-수집한다) 명령으로 읽되, `HEAD` 대신 그 층의 `refs/heads/<branch>`를 명시한다. 하단 층의 `<아래>`는 trunk, 위층은 바로 아래 branch다.
+1. 각 층을 [상태 수집](github.md#상태를-수집한다) 명령으로 읽되, `HEAD` 대신 그 층의 `refs/heads/<branch>`를 명시한다. 하단 층의 `<아래>`는 `<remote>/<trunk>`, 위층은 바로 아래 층의 `refs/heads/<branch>`다.
 
    ```bash
    git rev-parse refs/heads/<branch>

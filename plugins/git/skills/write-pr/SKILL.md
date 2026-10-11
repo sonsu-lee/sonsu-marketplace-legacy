@@ -38,7 +38,7 @@ description: 현재 Git 변경을 주제별 단일 PR 또는 GitHub native stack
 
 ### PR을 준비하고 게시한다
 
-1. **입력 확보.** 사용자가 base, head, 전체 diff 같은 확인된 조회 결과를 제공하고 추가 조회를 막았다면 그 자료를 입력으로 쓴다. 그 밖에는 [상태 수집](references/github.md#상태를-수집한다)의 `git`·`gh` 명령으로 대상 저장소, base·head, 전체 diff, 작업 트리, 양식, 기존 PR을 읽는다. 사용자가 원격 조회를 막았으면 `gh` 명령은 실행하지 않는다.
+1. **입력 확보.** 사용자가 base, head, 전체 diff 같은 확인된 조회 결과를 제공하고 추가 조회를 막았다면 그 자료를 입력으로 쓴다. 그 밖에는 [상태 수집](references/github.md#상태를-수집한다)의 `git`·`gh` 명령으로 대상 저장소, 인증 주체, base·head, 전체 diff, 작업 트리, 양식, 기존 PR을 읽는다. 사용자가 원격 조회를 막았으면 `gh`와 `git ls-remote`는 실행하지 않는다.
 
    | 확인 결과 | 행동 |
    |---|---|
@@ -47,7 +47,7 @@ description: 현재 Git 변경을 주제별 단일 PR 또는 GitHub native stack
    | 커밋하지 않은 변경 있음 | 원격 PR에 포함되지 않는 변경으로 보고한다. |
    | 조회 실패 | 그 조회에 기대는 결정은 확정하지 않고 미확인으로 남긴다. |
 
-   `git log <base>..HEAD`와 `git diff <base>...HEAD`를 다음 단계의 입력으로 쓴다.
+   `git log <remote>/<base>..HEAD`와 `git diff <remote>/<base>...HEAD`를 다음 단계의 입력으로 쓴다.
 2. **PR 경계.** [PR 작성 지침](references/pr-writing.md#pr-경계를-점검한다)으로 경계를 정하고, 여러 PR이 서로 의존하면 [stacked PR 규칙](references/stacked-prs.md)을 적용한다. 현재 branch에 여러 주제가 섞였거나 필요한 branch·commit이 없으면 PR 계획과 필요한 Git 작업을 제시하고, 그 작업이 준비되거나 사용자가 함께 허가한 뒤 게시한다.
 3. **양식과 언어.** [PR 템플릿 규칙](references/pr-template.md)으로 `pullRequestTemplates` 조회 결과를 해석해 양식을 고르고 출력 언어를 정한다.
 4. **본문.** [PR 작성 지침](references/pr-writing.md)에 따라 전체 diff와 현재 검증 근거로 제목·본문을 쓴다. commit 제목이나 `--fill` 결과는 참고만 한다. Writing·Fluent를 함께 쓸 때는 [작성 지침 함께 적용하기](../../references/writing-composition.md)에 따라 적용 양식과 확인 상태, 출력 언어, 근거·편집 범위와 보호할 연결 문법을 전달한다. 양식이 확인되기 전의 초안은 임시 초안으로 보고한다.

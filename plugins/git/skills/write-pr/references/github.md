@@ -4,26 +4,31 @@ GitHub PR payload를 작성하거나 새 PR을 게시할 때 읽는다. 여러 P
 
 ## 상태를 수집한다
 
-fetch, checkout, Git 설정 변경 없이 다음을 읽는다. `<REPO>`는 `gh repo view`가 돌려준 `url`의 host와 `nameWithOwner`다. remote URL에는 자격 증명이 들어 있을 수 있으므로 `git remote -v`처럼 URL을 출력하는 명령은 쓰지 않는다. 사용자가 원격 조회를 막았으면 `gh` 명령은 실행하지 않고 해당 항목을 미확인으로 둔다.
+fetch, checkout, Git 설정 변경 없이 다음을 읽는다. `<REPO>`는 `gh repo view`가 돌려준 `url`의 host(`<HOST>`)와 `nameWithOwner`다. remote URL에는 자격 증명이 들어 있을 수 있으므로 `git remote -v`처럼 URL을 출력하는 명령은 쓰지 않는다. 범위는 로컬 base branch가 아니라 remote-tracking ref `<remote>/<base>`로 계산한다.
 
 ```bash
-git status
+git status --untracked-files=all
 git remote
 git rev-parse --abbrev-ref '@{push}'
 gh repo view --json nameWithOwner,url,isFork,parent,defaultBranchRef,pullRequestTemplates
-git log --oneline <base>..HEAD
-git diff --stat <base>...HEAD
-git ls-remote <remote> refs/heads/<branch>
+gh auth status --active --hostname <HOST>
+git log --oneline <remote>/<base>..HEAD
+git diff --stat <remote>/<base>...HEAD
+GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND='ssh -o BatchMode=yes -o ConnectTimeout=10' \
+  git ls-remote <remote> refs/heads/<branch> refs/heads/<base>
 gh pr list --repo <REPO> --head <branch> --state open --json number,url,isDraft,headRepositoryOwner
 ```
+
+사용자가 원격 조회를 막았으면 `gh`와 `git ls-remote`를 실행하지 않고 원격 SHA·양식·기존 PR·인증 주체를 미확인으로 둔다. `git ls-remote`는 인증 입력을 기다리지 않도록 위 환경 변수와 함께 실행하고, 실패하면 원격 SHA를 미확인으로 둔다.
 
 | 확인 항목 | 근거 |
 |---|---|
 | 대상 저장소와 fork 여부 | `gh repo view`의 `nameWithOwner`, `isFork`, `parent` |
-| base | 사용자 지정, `git config branch.<branch>.gh-merge-base`, `defaultBranchRef.name` 순서 |
+| 인증 주체 | `gh auth status --active`의 활성 계정 |
+| base | 사용자 지정, `git config branch.<branch>.gh-merge-base`, `defaultBranchRef.name` 순서. `git ls-remote`의 base SHA가 `git rev-parse <remote>/<base>`와 다르면 remote-tracking ref가 오래된 것이므로 범위를 확정하지 않고 fetch가 필요하다고 보고한다. |
 | head | 현재 branch, `git rev-parse HEAD`, 원격 ref의 `git ls-remote` 결과 |
-| 보낼 범위 | `git log <base>..HEAD`, `git diff <base>...HEAD` |
-| 미커밋 변경과 진행 중인 Git 작업 | `git status` |
+| 보낼 범위 | `git log <remote>/<base>..HEAD`, `git diff <remote>/<base>...HEAD` |
+| 미커밋 변경과 진행 중인 Git 작업 | `git status --untracked-files=all`. 설정과 관계없이 untracked 파일까지 보인다. |
 | 적용할 PR 양식 | `pullRequestTemplates` ([PR 템플릿 규칙](pr-template.md)) |
 | 같은 저장소 head branch의 열린 PR | `gh pr list --head`. 다른 fork에서 이름이 같은 branch로 연 PR도 나오므로 `headRepositoryOwner.login`이 push 대상 저장소 owner인 항목만 기존 PR로 본다. |
 
@@ -35,7 +40,7 @@ gh pr list --repo <REPO> --head <branch> --state open --json number,url,isDraft,
 
 - `git status`가 merge·rebase·cherry-pick·revert·bisect 진행 중이거나 detached HEAD를 보인다.
 - head가 base와 같은 branch(로컬 branch와 그 remote-tracking ref 포함)이거나 같은 commit이다. base branch에 직접 만든 미push commit도 PR로 보내지 않는다.
-- `git log <base>..HEAD`가 비어 있다.
+- `git log <remote>/<base>..HEAD`가 비어 있다.
 - 같은 저장소 head branch의 열린 PR이 있다.
 
 PR에 새 branch가 필요하면 이름을 제안만 하고 생성·rename은 사용자의 별도 Git 작업으로 넘긴다. 이름을 제안할 때는 [공통 이름 규칙](../../../references/branch-naming.md)을 읽는다. 조회에 실패한 항목은 확인하지 못한 상태로 보고하고 그 항목에 기대는 결정을 확정하지 않는다.
@@ -68,7 +73,7 @@ CLI에서는 완성한 multiline body를 임시 파일에 기록하고 `gh pr cr
 
 ## 생성하고 검증한다
 
-1. `git rev-parse HEAD`, `git status`, `gh pr list --head`를 다시 실행해 head SHA가 준비한 payload와 같고 미커밋 변경·진행 중인 Git 작업·같은 head의 열린 PR이 없는지 확인한다. 최종 제목·본문·티켓 연결·검증 근거·`target_pr_state`가 요청 범위에 맞는지 대조한다.
+1. `gh auth status --active --hostname <HOST>`, `git rev-parse HEAD`, `git status --untracked-files=all`, `gh pr list --head`를 다시 실행해 활성 계정과 head SHA가 준비한 payload와 같고 미커밋 변경·진행 중인 Git 작업·같은 head의 열린 PR이 없는지 확인한다. 활성 계정이 바뀌었으면 게시하지 않고 보고한다. 최종 제목·본문·티켓 연결·검증 근거·`target_pr_state`가 요청 범위에 맞는지 대조한다.
 2. 필요한 일반 push를 한 번 수행하고 remote ref를 확인한다.
 3. 미디어가 없으면 `draft`에 `--draft`를 사용하고 명시된 `ready`에만 non-draft로 생성한다. 미디어가 있으면 [화면 자료 업로드 절차](../../../references/media.md#github에-올린다)대로 Draft PR 생성과 첨부를 한 명령으로 하고, 명시된 Ready 전환은 첨부 확인 뒤에 한다. `--attach`를 쓸 수 없을 때의 대안도 그 절차를 따른다.
 4. 반환된 URL이나 number로 PR을 다시 읽어 정확한 저장소·URL·번호·제목·본문·base·head·Draft 상태·head SHA와 ticket reference를 확인한다. 미디어가 있으면 본문에 `NN-…` 로컬 참조가 남아 있지 않은지도 확인한다.
